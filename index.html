@@ -11,11 +11,27 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Scoreboard" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <link rel="manifest" href="manifest.json" />
+  <link rel="manifest" href="./manifest.json" />
 
   <!-- Apple Touch Icon (inline SVG als Data-URL) -->
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%231a1a2e'/%3E%3Ctext x='96' y='130' font-family='Georgia,serif' font-size='100' font-weight='bold' fill='%23ccd0ff' text-anchor='middle'%3E★%3C/text%3E%3C/svg%3E" />
 
+  <script>
+    // Dynamically fix manifest start_url for GitHub Pages subpath
+    (function() {
+      const base = window.location.pathname.replace(/\/[^/]*$/, '/');
+      const manifestEl = document.querySelector('link[rel="manifest"]');
+      if (!manifestEl) return;
+      fetch(manifestEl.href)
+        .then(r => r.json())
+        .then(manifest => {
+          manifest.start_url = base;
+          manifest.scope = base;
+          const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+          manifestEl.href = URL.createObjectURL(blob);
+        });
+    })();
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500&display=swap');
 
@@ -258,7 +274,7 @@
 <div class="app">
   <header>
     <h1>Dart Counter</h1>
-    <p>Punktestand Tracker</p>
+    <p>Point Tracker</p>
   </header>
 
   <!-- PWA Install Banner -->
