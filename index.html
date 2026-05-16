@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Scoreboard</title>
+
+  <!-- PWA Meta -->
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Scoreboard" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Apple Touch Icon (inline SVG als Data-URL) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%231a1a2e'/%3E%3Ctext x='96' y='130' font-family='Georgia,serif' font-size='100' font-weight='bold' fill='%23ccd0ff' text-anchor='middle'%3E★%3C/text%3E%3C/svg%3E" />
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d1a;
+      --surface: #13132a;
+      --border: rgba(255,255,255,0.08);
+      --text: #e8e8ff;
+      --muted: rgba(232,232,255,0.5);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 12px 12px env(safe-area-inset-bottom, 12px);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      padding: 16px 0 14px;
+    }
+    header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 4px;
+      color: #ccd0ff;
+    }
+    header p {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Controls bar */
+    .controls-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      align-items: center;
+    }
+    .player-label {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    select {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 7px 10px;
+      outline: none;
+    }
+    .reset-all-btn {
+      flex: 1;
+      padding: 9px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .reset-all-btn:active { background: rgba(255,255,255,0.08); color: var(--text); }
+
+    /* Grid */
+    .grid {
+      display: grid;
+      gap: 10px;
+      flex: 1;
+    }
+    .grid.p1 { grid-template-columns: 1fr; }
+    .grid.p2 { grid-template-columns: 1fr 1fr; }
+    .grid.p3 { grid-template-columns: 1fr 1fr; }
+    .grid.p4 { grid-template-columns: 1fr 1fr; }
+
+    /* Player card */
+    .card {
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 190px;
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .card.full { grid-column: 1 / -1; min-height: 160px; }
+
+    .card-header {
+      padding: 12px 14px 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .player-name {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: 0.8;
+      outline: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s;
+      max-width: 80px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .player-name:focus {
+      border-bottom-color: rgba(255,255,255,0.3);
+      white-space: normal;
+      overflow: visible;
+    }
+    .rank-badge {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 15px;
+      letter-spacing: 1px;
+      opacity: 0.55;
+    }
+
+    .score-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .score {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 80px;
+      line-height: 1;
+    }
+
+    .win-star {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-size: 18px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .win-star.show { opacity: 1; }
+
+    .btn-row {
+      display: flex;
+    }
+    .btn-row button {
+      flex: 1;
+      padding: 16px 4px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 1px;
+      border: none;
+      background: rgba(0,0,0,0.18);
+      color: inherit;
+      cursor: pointer;
+      transition: background 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-row button:first-child { border-radius: 0 0 0 14px; }
+    .btn-row button:last-child  { border-radius: 0 0 14px 0; }
+    .btn-row button.reset-btn   { font-size: 13px; letter-spacing: 1px; flex: 0.75; background: rgba(0,0,0,0.12); }
+    .btn-row button:active       { background: rgba(0,0,0,0.35); }
+
+    /* Card color themes */
+    .c1 { background: #1a1a2e; color: #ccd0ff; }
+    .c2 { background: #0f3460; color: #c8e0ff; }
+    .c3 { background: #3d1f6e; color: #e8d8ff; }
+    .c4 { background: #7a0c2e; color: #ffd8de; }
+
+    /* Score animation */
+    @keyframes bump  { 0%{transform:scale(1)} 40%{transform:scale(1.2)} 100%{transform:scale(1)} }
+    @keyframes shake { 0%{transform:translateX(0)} 30%{transform:translateX(-6px)} 70%{transform:translateX(6px)} 100%{transform:translateX(0)} }
+    .anim-bump  { animation: bump  0.22s ease; }
+    .anim-shake { animation: shake 0.22s ease; }
+
+    /* Install banner */
+    #install-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    #install-banner.visible { display: flex; }
+    #install-btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid rgba(204,208,255,0.3);
+      background: transparent;
+      color: #ccd0ff;
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #install-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 4px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Scoreboard</h1>
+    <p>Punktestand Tracker</p>
+  </header>
+
+  <!-- PWA Install Banner -->
+  <div id="install-banner">
+    <span>📲 Als App installieren?</span>
+    <button id="install-btn">Installieren</button>
+    <button id="install-close" aria-label="Schließen">×</button>
+  </div>
+
+  <div class="controls-bar">
+    <span class="player-label">Spieler:</span>
+    <select id="playerCount" onchange="setPlayerCount(this.value)">
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4" selected>4</option>
+    </select>
+    <button class="reset-all-btn" onclick="resetAll()">↺ Alle zurücksetzen</button>
+  </div>
+
+  <div class="grid p4" id="grid"></div>
+</div>
+
+<script>
+  const COLORS = ['c1','c2','c3','c4'];
+  const NAMES  = ['Spieler 1','Spieler 2','Spieler 3','Spieler 4'];
+  let scores      = [0,0,0,0];
+  let playerCount = 4;
+
+  function getRanks() {
+    const vals = scores.slice(0, playerCount);
+    const sorted = [...vals].sort((a,b) => b - a);
+    return vals.map(s => sorted.indexOf(s) + 1);
+  }
+
+  function render() {
+    const grid = document.getElementById('grid');
+    grid.className = 'grid p' + playerCount;
+    const ranks = getRanks();
+    grid.innerHTML = '';
+
+    for (let i = 0; i < playerCount; i++) {
+      const isLeader = ranks[i] === 1 && scores[i] > 0;
+      const card = document.createElement('div');
+      card.className = 'card ' + COLORS[i] + (playerCount === 3 && i === 2 ? ' full' : '');
+      card.id = 'card' + i;
+      card.innerHTML = `
+        <div class="win-star${isLeader ? ' show' : ''}" id="star${i}">★</div>
+        <div class="card-header">
+          <span class="player-name" id="name${i}" contenteditable="true" spellcheck="false">${NAMES[i]}</span>
+          <span class="rank-badge" id="rank${i}">#${ranks[i]}</span>
+        </div>
+        <div class="score-wrap">
+          <span class="score" id="score${i}">${scores[i]}</span>
+        </div>
+        <div class="btn-row">
+          <button onclick="change(${i}, -1)" aria-label="Minus 1">−1</button>
+          <button class="reset-btn" onclick="resetOne(${i})" aria-label="Zurücksetzen">RST</button>
+          <button onclick="change(${i}, 1)" aria-label="Plus 1">+1</button>
+        </div>
+      `;
+      grid.appendChild(card);
+    }
+  }
+
+  function change(i, delta) {
+    scores[i] += delta;
+    const el = document.getElementById('score' + i);
+    el.textContent = scores[i];
+    el.className = 'score ' + (delta > 0 ? 'anim-bump' : 'anim-shake');
+    setTimeout(() => el.className = 'score', 300);
+    updateRanks();
+  }
+
+  function resetOne(i) {
+    scores[i] = 0;
+    document.getElementById('score' + i).textContent = 0;
+    updateRanks();
+  }
+
+  function resetAll() {
+    scores = [0,0,0,0];
+    render();
+  }
+
+  function updateRanks() {
+    const ranks = getRanks();
+    for (let i = 0; i < playerCount; i++) {
+      const rb   = document.getElementById('rank' + i);
+      const star = document.getElementById('star' + i);
+      if (rb)   rb.textContent = '#' + ranks[i];
+      if (star) star.className = 'win-star' + (ranks[i] === 1 && scores[i] > 0 ? ' show' : '');
+    }
+  }
+
+  function setPlayerCount(n) {
+    playerCount = parseInt(n);
+    scores = [0,0,0,0];
+    render();
+  }
+
+  render();
+
+  // PWA Install Banner
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('install-banner').classList.add('visible');
+  });
+  document.getElementById('install-btn').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('install-banner').classList.remove('visible');
+  });
+  document.getElementById('install-close').addEventListener('click', () => {
+    document.getElementById('install-banner').classList.remove('visible');
+  });
+</script>
+</body>
+</html>
