@@ -1,7 +1,7 @@
 {
-  "name": "Scoreboard",
-  "short_name": "Scoreboard",
-  "description": "Mehrspieler Punktestand Tracker",
+  "name": "Dart Counter",
+  "short_name": "DartCount",
+  "description": "Multiplayer Point Tracker",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
